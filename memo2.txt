@@ -1,0 +1,52 @@
+
+http://hamlin.html.xdomain.jp/HDD/HDD_LMT/HDD_LMT.htm
+http://radioc.web.fc2.com/column/dosvlimits.htm
+
+FAT16のパーティションの最大サイズは2047MBとのことだ。(2048MBではない。)
+ただし、MS-DOS6.2の場合。3.3では128MBまで。
+
+●最大容量
+
+○SCSI(PC-9801-55L)
+1シリンダを1MBにすると調整しやすい。
+H=32,S=64,512B -> 1,048,576MB/cyl
+
+・2047MB
+2(管理領域)+2047cyl = 2049cyl -> 2148532224
+
+・128MB
+2(管理領域)+128cyl = 130cyl -> 136314880
+
+シリンダ数が4096あたりで、FORMAT.EXEがゼロ除算エラーとなる。
+H=64やS=128でもゼロ除算エラーとなった。
+※ファームウェアによっても異なるのかもしれない。
+
+・Windowsでのファイルの作り方
+>fsutil file createnew H:\HDDIMAGE[scsi0][h32][s64][512].hds 2148532224
+
+
+○SASI(PC-9801-27)
+すべてのパラメタが固定値？
+H=8,S=33,256
+cyl=615
+
+シリンダ数を増やしても、615として認識される。(DRVLST.EXE)
+
+・40MB
+615 = 2(管理領域)+613cyl -> 41564160
+
+●接続構成
+
+                  DOS5  DOS6  FD
+SASI #1   40M     A:    OFF   OFF
+     #2   40M     B:    OFF   OFF
+SCSI #1  128M     C:    A:    E:
+     #2  128M     D:    B:    F:
+     #3 2047M     ?     C:    ?
+     #4 (HDD)           (D:)
+     #5 (CD-ROM)        (E:)
+     #6 (MO)            (F:)
+FD   #1           E:    D:    A:
+     #2           F:    E:    B:
+     #3           G:    F:    C:
+     #4           H:    G:    D:
