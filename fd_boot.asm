@@ -13,27 +13,38 @@ LOADSEG		equ	1fc0h
 
 org		0100h
 start:
+		call	rom_init	; ROM初期化
+		jmp	daua_input
+
+romsegs		dw	0000h, 0d400h
+		dw	0000h, 0dc00h
+		dw	0000h, 0d700h
+		dw	0, 0
+
 daua_input:
 		push	cs
 		pop	ds
+
 		mov	si, msg_input
 		call	puts
 
-		xor	ax, ax
+		xor	ax, ax		; システム共通域参照
 		mov	ds, ax
 
+		; ドライブ選択
 		mov	ah, 00h		; キー入力
 		int	18h
 
 		cmp	al, '1'
-		jb	daua_input
+		jb	daua_input	; < 1
 		cmp	al, '4'
-		ja	daua_input
+		ja	daua_input	; > 4
 
 		sub	al, '1'
 		add	al, DAUA
-		mov	[0584h], al
+		mov	[0584h], al	; 90h-93h
 
+		; IPLセクタ読み込み
 		mov	bx, READLEN
 		mov	ch, SECSIZE
 		mov	cl, 0		; c=0
@@ -48,26 +59,27 @@ daua_input:
 
 		jnb	boot		; CF=0(no error)
 
+read_error:	; 読み込み失敗
 		push	cs
 		pop	ds
 		mov	si, msg_error
 		call	puts
-		mov	al, ah
+		mov	al, ah		; AH=BIOSエラーコード
 		call	preg8
 		mov	al, 0ah
 		call	putc
 		jmp	daua_input
 
-boot:
+boot:		; 読み込み成功
 		push	cs
 		pop	ds
 		mov	si, msg_booting
 		call	puts
 
-		xor	ax, ax
+		xor	ax, ax		; IPLはDS=0を前提としている
 		mov	ds, ax
 
-		jmp	LOADSEG:0000h
+		jmp	LOADSEG:0000h	; IPLにジャンプ
 
 
 msg_input	db	"-- Input FD drive number (1-4) --", 0ah, 0
@@ -76,3 +88,4 @@ msg_booting	db	"Booting...", 0ah, 0
 
 %include "printlib.inc"
 %include "printreg.inc"
+%include "rom_init.inc"

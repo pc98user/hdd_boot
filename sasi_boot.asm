@@ -1,23 +1,24 @@
 ;===========================================================
 ; sasi_boot.asm
 ;
-; SASI ID=0のハードディスクから起動する
+; SASIハードディスクから起動する
 ;===========================================================
 cpu		8086
 bits		16
 
-ROMSEG		equ	0d700h
-
 org		0100h
 start:
-		mov	ax, ROMSEG
-		mov	es, ax
+		call	rom_init	; ROM初期化
+		; SASIは初期化するとブートする
 
-		cmp	byte [es:0009h], 55h
-		jne	.exit
-		cmp	byte [es:000ah], 0AAh
-		jne	.exit
-
-		call	ROMSEG:0000h
-.exit:
+		; 起動できるデバイスがないとき
 		retf
+
+romsegs		dw	0000h, 0d400h
+		dw	0000h, 0dc00h
+		dw	0000h, 0d700h
+		dw	0, 0
+
+%include "printlib.inc"
+%include "printreg.inc"
+%include "rom_init.inc"
