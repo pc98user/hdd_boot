@@ -33,9 +33,9 @@ rmi_loop:
 		call	preg16
 
 		; ROMの存在確認
-		cmp	byte [es:bx+0009h], 55h
+		cmp	byte [es:0009h], 55h
 		jne	rmi_notexist
-		cmp	byte [es:bx+000ah], 0AAh
+		cmp	byte [es:000ah], 0AAh
 		jne	rmi_notexist
 
 		; 初期化中
