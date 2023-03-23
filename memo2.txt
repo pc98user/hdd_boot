@@ -28,25 +28,75 @@ H=64やS=128でもゼロ除算エラーとなった。
 ○SASI(PC-9801-27)
 すべてのパラメタが固定値？
 H=8,S=33,256
-cyl=615
+cyl=615？
 
-シリンダ数を増やしても、615として認識される。(DRVLST.EXE)
+シリンダ数を増やしても(640とか)、減らしても(500とか)、614として認識される。(DRVLST.EXE)
+FORMAT.EXEでは、
+           FROM 〜TO
+初期化直後 00001〜00613
+領域確保   00001〜00600
+→初期化直後は613シリンダに固定され、領域確保では600シリンダまでしか指定できない。
+　小さいドライブに対する安全策なのか、代替領域なのか。
+　(減らしたイメージを使用するのは危険と思われる。)
 
 ・40MB
-615 = 2(管理領域)+613cyl -> 41564160
+615cyl -> 41564160
+
+>fsutil file createnew H:\HDDIMAGE[sasi0][lun0][h8][s33][256].hds 41564160
+>fsutil file createnew H:\HDDIMAGE[sasi0][lun1][h8][s33][256].hds 41564160
+
+変換番長では[lun1]がドライブ#2となる。([sasi1]ではない。)
+
+Neko Project 21/Wのプリセットでは以下となっている。
+Cylinder=615,Head=8,Sector=33,Sector Size=256
+※Anex86、T98-Nextでは明にSASIを指定できない。
+
+できるファイル(HDI)は41,568,256で4096(ヘッダ)+41564160(実体)
 
 ●接続構成
-
                   DOS5  DOS6  FD
 SASI #1   40M     A:    OFF   OFF
      #2   40M     B:    OFF   OFF
-SCSI #1  128M     C:    A:    E:
-     #2  128M     D:    B:    F:
-     #3 2047M     ?     C:    ?
-     #4 (HDD)           (D:)
-     #5 (CD-ROM)        (E:)
-     #6 (MO)            (F:)
-FD   #1           E:    D:    A:
-     #2           F:    E:    B:
-     #3           G:    F:    C:
-     #4           H:    G:    D:
+SCSI #0  128M     C:    A:    E:
+     #1  128M     D:    B:    F:
+     #2 2047M     E:    C:    G:
+     #3 (HDD)           (D:)
+     #4 (CD-ROM)        (E:)
+     #5 (MO)            (F:)
+     #6
+FD   #1           F:    D:    A:
+     #2           G:    E:    B:
+     #3           H:    F:    C:
+     #4           I:    G:    D:
+
+●バイナリの選択
+
+○fdboot.bin
+SCSI初期化 → SASI初期化(＆ブート) → FDブート
+・SASIは初期化すると自動的にブートしてしまうため、
+　SASIドライブの電源をOFFにせざるを得ない(上記接続構成のとおり)
+
+○sasiboot.bin
+SCSI初期化 → SASI初期化＆ブート
+・SCSIは初期化しても自動的にブートしないので、初期化できる
+・SASIは初期化すると自動的にブートする
+　SCSIを先に初期化する
+・SASIにBOOT可のドライブがない場合はおそらくハング
+
+○scsiboot.bin
+SCSI初期化 → SCSIブート
+・SASIは初期化すると自動的にブートしてしまうため、省いている
+　時間短縮のためでもある
+・SCSIにBOOT可のドライブがない場合はおそらくFD-IPLwareに戻る
+
+○hddboot.bin
+SCSI初期化 → SASI初期化(＆ブート) → SCSIブート
+・SASIは初期化すると自動的にブートするので、SCSIを先に初期化する
+・SCSIから起動したい場合は、SASIドライブの電源をOFFにする(上記接続構成のとおり)
+　または、SASIドライブをBOOT不可にする
+　(ただし認識の順はSASI→SCSIなので、ドライブ番号がずれるため利用価値は少ない)
+
+上記より、
+・fdboot.binはsasiboot.binを兼ねている
+・sasiboot.binとscsiboot.binはhddboot.binを使用し、
+　SASIドライブのON/OFFで使い分けられる
